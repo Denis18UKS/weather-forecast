@@ -5,6 +5,18 @@ const PrecipitationPieChart = ({ precipitation, days }) => {
     const svgRef = useRef();
     const [hoverData, setHoverData] = useState(null); // Стейт для данных, которые будут отображаться при наведении
 
+    // Добавление состояния для фильтрации осадков
+    const [minPrecipitation, setMinPrecipitation] = useState(0);  // Минимальное значение осадков
+    const [maxPrecipitation, setMaxPrecipitation] = useState(100); // Максимальное значение осадков
+
+    // Функция фильтрации осадков по диапазону
+    const filterPrecipitation = (precipitation) => {
+        return precipitation.filter(value => value >= minPrecipitation && value <= maxPrecipitation);
+    };
+
+    // Отфильтрованные данные осадков
+    const filteredPrecipitation = filterPrecipitation(precipitation);
+
     useEffect(() => {
         const svg = d3.select(svgRef.current);
         svg.selectAll("*").remove(); // Очистка перед рендером
@@ -18,10 +30,9 @@ const PrecipitationPieChart = ({ precipitation, days }) => {
             .domain(days)
             .range(d3.schemeTableau10);
 
-        const pie = d3.pie().value(d => d)(precipitation);
+        const pie = d3.pie().value(d => d)(filteredPrecipitation);
 
         const arc = d3.arc().innerRadius(50).outerRadius(radius);
-        const arcHover = d3.arc().innerRadius(50).outerRadius(radius + 10); // Увеличенный радиус при наведении
 
         // Создание группы для диаграммы
         const chartGroup = svg
@@ -44,8 +55,7 @@ const PrecipitationPieChart = ({ precipitation, days }) => {
             .attr("d", arc)
             .attr("fill", (d, i) => colorScale(days[i]))
             .attr("stroke", "white")
-            .attr("stroke-width", 2)
-            .attr("opacity", 1);
+            .attr("stroke-width", 2);
 
         // Добавление текста (названия дней и процентов)
         slices
@@ -60,33 +70,43 @@ const PrecipitationPieChart = ({ precipitation, days }) => {
         // Добавление событий наведения
         slices
             .on("mouseover", function (event, d) {
-                // Увеличить выделенный сегмент
-                d3.select(this).select("path").transition().duration(200).attr("d", arcHover);
-
-                // Уменьшить видимость остальных сегментов
-                slices
-                    .transition()
-                    .duration(200)
-                    .attr("opacity", p => (p === d ? 1 : 0.3));
+                // При наведении на сегмент выделяем его, не делая анимации
+                d3.select(this).select("path").attr("stroke", "black").attr("stroke-width", 3);
 
                 // Обновить данные, которые показываются
                 setHoverData({ day: days[d.index], value: d.data });
             })
             .on("mouseout", function () {
-                // Вернуть всё в исходное состояние
-                d3.select(this).select("path").transition().duration(200).attr("d", arc);
-                slices.transition().duration(200).attr("opacity", 1);
+                // Возврат к исходному состоянию (без анимации)
+                d3.select(this).select("path").attr("stroke", "white").attr("stroke-width", 2);
 
                 // Сбросить данные при уходе с элемента
                 setHoverData(null);
             });
-
-    }, [precipitation, days]);
+    }, [filteredPrecipitation, days]); // Отслеживаем изменения в фильтрованных данных
 
     return (
         <div style={{ textAlign: "center" }}>
             <h2>Распределение осадков за неделю</h2>
+            
+            {/* Фильтры для осадков */}
+            <div>
+                <label>Минимальные осадки (%): </label>
+                <input
+                    type="number"
+                    value={minPrecipitation}
+                    onChange={(e) => setMinPrecipitation(Number(e.target.value))}
+                />
+                <label>Максимальные осадки (%): </label>
+                <input
+                    type="number"
+                    value={maxPrecipitation}
+                    onChange={(e) => setMaxPrecipitation(Number(e.target.value))}
+                />
+            </div>
+
             <svg ref={svgRef}></svg>
+            
             {hoverData && (
                 <div style={{ marginTop: "20px", fontSize: "16px", fontWeight: "bold" }}>
                     <p>День: {hoverData.day}</p>

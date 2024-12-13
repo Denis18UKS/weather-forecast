@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { Line } from "react-chartjs-2";
 import {
     Chart as ChartJS,
@@ -26,6 +26,9 @@ ChartJS.register(
 const TemperatureChart = () => {
     const { days, hourlyTemperatures } = weatherData;
 
+    const [minTemp, setMinTemp] = useState(-10); // Минимальная температура по умолчанию
+    const [maxTemp, setMaxTemp] = useState(40); // Максимальная температура по умолчанию
+
     // Функция для вычисления средней температуры за день
     const calculateDailyAverages = (hourlyTemperatures) => {
         const dailyAverages = [];
@@ -37,18 +40,20 @@ const TemperatureChart = () => {
         return dailyAverages;
     };
 
-    // Вычисление средней температуры для каждого дня
-    const dailyTemperatures = calculateDailyAverages(hourlyTemperatures);
+    // Фильтрация температур по диапазону
+    const filterTemperatures = (temperatures) => {
+        return temperatures.filter(temp => temp >= minTemp && temp <= maxTemp);
+    };
 
-    const hourlyChartRef = useRef(null);
-    const dailyChartRef = useRef(null);
+    const filteredHourlyTemperatures = filterTemperatures(hourlyTemperatures);
+    const dailyTemperatures = calculateDailyAverages(filteredHourlyTemperatures);
 
     const hourlyChartData = {
         labels: Array.from({ length: 24 }, (_, i) => `${i}:00`),
         datasets: [
             {
                 label: "Температура (°C) по часам",
-                data: hourlyTemperatures,
+                data: filteredHourlyTemperatures,
                 borderColor: "rgba(75, 192, 192, 1)",
                 backgroundColor: "rgba(75, 192, 192, 0.2)",
                 tension: 0.3,
@@ -84,44 +89,33 @@ const TemperatureChart = () => {
         },
     };
 
-    useEffect(() => {
-        return () => {
-            // Уничтожение экземпляров Chart при размонтировании компонента
-            if (hourlyChartRef.current) {
-                hourlyChartRef.current.destroy();
-            }
-            if (dailyChartRef.current) {
-                dailyChartRef.current.destroy();
-            }
-        };
-    }, []);
-
     return (
         <div>
             <h2>График температуры</h2>
+            
+            {/* Фильтр по температуре */}
+            <div>
+                <label>Минимальная температура: </label>
+                <input 
+                    type="number" 
+                    value={minTemp} 
+                    onChange={(e) => setMinTemp(Number(e.target.value))} 
+                />
+                <label>Максимальная температура: </label>
+                <input 
+                    type="number" 
+                    value={maxTemp} 
+                    onChange={(e) => setMaxTemp(Number(e.target.value))} 
+                />
+            </div>
+
             <div className="chart-container">
                 <h3>По часам</h3>
-                <Line
-                    ref={chart => {
-                        if (chart) {
-                            hourlyChartRef.current = chart.chart;
-                        }
-                    }}
-                    data={hourlyChartData}
-                    options={options}
-                />
+                <Line data={hourlyChartData} options={options} />
             </div>
             <div className="chart-container">
                 <h3>По дням</h3>
-                <Line
-                    ref={chart => {
-                        if (chart) {
-                            dailyChartRef.current = chart.chart;
-                        }
-                    }}
-                    data={dailyChartData}
-                    options={options}
-                />
+                <Line data={dailyChartData} options={options} />
             </div>
         </div>
     );
