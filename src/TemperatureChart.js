@@ -24,7 +24,21 @@ ChartJS.register(
 );
 
 const TemperatureChart = () => {
-    const { days, hourlyTemperatures, dailyTemperatures } = weatherData;
+    const { days, hourlyTemperatures } = weatherData;
+
+    // Функция для вычисления средней температуры за день
+    const calculateDailyAverages = (hourlyTemperatures) => {
+        const dailyAverages = [];
+        for (let i = 0; i < hourlyTemperatures.length; i += 24) {
+            const dailyData = hourlyTemperatures.slice(i, i + 24);
+            const dailyAverage = dailyData.reduce((acc, temp) => acc + temp, 0) / dailyData.length;
+            dailyAverages.push(dailyAverage);
+        }
+        return dailyAverages;
+    };
+
+    // Вычисление средней температуры для каждого дня
+    const dailyTemperatures = calculateDailyAverages(hourlyTemperatures);
 
     const hourlyChartRef = useRef(null);
     const dailyChartRef = useRef(null);
